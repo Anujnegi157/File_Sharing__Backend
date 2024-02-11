@@ -1,3 +1,5 @@
+/* The code you provided is a JavaScript module that exports two functions:
+`PostFile` and `SendMail`. */
 const express = require('express');
 const multer = require('multer');
 const {v4:uuid4} = require('uuid');
@@ -21,6 +23,7 @@ exports.PostFile = async (req,res)=>{
   // valiadate req
 
   upload(req,res,async (err)=>{
+    console.log(req.file);
     if(!req.file){
       return res.json({error : "All field are Required"});
     }
@@ -41,27 +44,37 @@ exports.PostFile = async (req,res)=>{
 
 }
 
-exports.SendMail = async (req,res)=>{
+exports.SendMail = async (req, res) => {
   console.log("working");
- const { uuid,emailFrom,emailTo } = req.body;
- const file = await File.findOne({uuid});
- if(file.Sender){
-  res.json({error : "email already Send"});
- }
- file.Sender = emailFrom;
- file.Receiver=emailTo;
- const respose = await file.save();
-SendMail({
-  from : emailFrom,
-  to  : emailTo,
-  subject : 'File Sharing App',
-  text : `${emailFrom} shared a file with you `,
-  html :  emailTemplate({
-    emailFrom : emailFrom,
-    downloadLink : `${process.env.APP_BASE_URL}/files/${file.uuid}`,
-    size : parseInt(file.size/1000)+ 'KB',
-    expires : '24 hours'
-  })
-})
-res.json({msg : "mail send"});
-}
+  const { uuid, emailFrom, emailTo } = req.body;
+  const file = await File.findOne({ uuid });
+
+  if (file.Sender) {
+    return res.json({ error: "Email already sent" });
+  }
+
+  file.Sender = emailFrom;
+  file.Receiver = emailTo;
+
+  try {
+    const response = await file.save();
+
+    await SendMail({
+      from: emailFrom,
+      to: emailTo,
+      subject: 'File Sharing App',
+      text: `${emailFrom} shared a file with you `,
+      html: emailTemplate({
+        emailFrom: emailFrom,
+        downloadLink: `${process.env.APP_BASE_URL}/files/${file.uuid}`,
+        size: parseInt(file.size / 1000) + 'KB',
+        expires: '24 hours'
+      })
+    });
+
+    res.json({ msg: "Mail sent" });
+  } catch (error) {
+    console.error("Error sending email:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
